@@ -8,6 +8,12 @@ import ReadAloud from '@/components/ReadAloud'
 import ErrorPanel from '@/components/ErrorPanel'
 import type { ScaffoldLevel } from '@/lib/errorInterpreter'
 import HintPanel from '@/components/HintPanel'
+import DiscussionBoard from '@/components/DiscussionBoard'
+import GroupPicker from '@/components/GroupPicker'
+import CollabPresence from '@/components/CollabPresence'
+import CollabCursors from '@/components/CollabCursors'
+import CollabStatusBadge from '@/components/CollabStatusBadge'
+import { useCollab } from '@/lib/useCollab'
 
 interface Assignment {
   id: string
@@ -19,6 +25,7 @@ interface Assignment {
   starter_code: string
   hints_enabled: boolean
   lesson_id: string | null
+  assignment_type?: string
 }
 
 interface Submission {
@@ -68,6 +75,62 @@ export default function AssignmentEditorPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [runCount, setRunCount] = useState(0)
   const [hasEditedSinceRun, setHasEditedSinceRun] = useState(false)
+  const [isDiscussion, setIsDiscussion] = useState(false)
+  const [discussionTitle, setDiscussionTitle] = useState('')
+  const [discussionInstructions, setDiscussionInstructions] = useState('')
+
+  // Collab state — wired to a Supabase Realtime channel once the
+  // student has joined a group via the picker above the editor.
+  const [collabGroupId, setCollabGroupId] = useState<string | null>(null)
+  const editorContainerRef = useRef<HTMLDivElement | null>(null)
+  const codeBroadcastTimer = useRef<number | null>(null)
+  const collabMe = profile
+    ? { user_id: profile.profile_id, display_name: profile.display_name, avatar_url: profile.avatar_url || null }
+    : null
+  const channelName = collabGroupId ? `collab:group:${collabGroupId}` : null
+  const {
+    ready: collabReady, members: collabMembers, carets: collabCarets, mice: collabMice,
+    sendCode, sendCaret, sendMouse,
+    markEdit,
+  } = useCollab({
+    channelName,
+    me: collabMe,
+    groupId: collabGroupId,
+    onRemoteCode: incoming => { setCode(incoming) },
+  })
+
+  useEffect(() => {
+    if (!collabReady) return
+    const el = editorContainerRef.current
+    if (!el) return
+    let last = 0
+    const onMove = (e: MouseEvent) => {
+      const now = Date.now()
+      if (now - last < 33) return
+      last = now
+      const rect = el.getBoundingClientRect()
+      sendMouse(e.clientX - rect.left, e.clientY - rect.top)
+    }
+    el.addEventListener('mousemove', onMove)
+    return () => el.removeEventListener('mousemove', onMove)
+  }, [collabReady, sendMouse])
+
+  useEffect(() => {
+    if (!collabReady) return
+    const ta = textareaRef.current
+    if (!ta) return
+    const onSelChange = () => {
+      sendCaret(ta.selectionStart, ta.selectionEnd, ta.value.length)
+    }
+    ta.addEventListener('select', onSelChange)
+    ta.addEventListener('keyup', onSelChange)
+    ta.addEventListener('click', onSelChange)
+    return () => {
+      ta.removeEventListener('select', onSelChange)
+      ta.removeEventListener('keyup', onSelChange)
+      ta.removeEventListener('click', onSelChange)
+    }
+  }, [collabReady, sendCaret])
 
   useEffect(() => {
     if (loading) return
@@ -99,6 +162,17 @@ export default function AssignmentEditorPage() {
   const loadAssignment = async () => {
     setDataLoading(true)
     try {
+      // Discussion assignments don't go through the code-open flow — they
+      // have no submission row until thresholds are crossed. Detect early.
+      const meta = await api.get<{ assignment_type?: string; title: string; instructions: string }>(`/assignments/${assignmentId}`).catch(() => null)
+      if (meta && meta.assignment_type === 'discussion') {
+        setIsDiscussion(true)
+        setDiscussionTitle(meta.title)
+        setDiscussionInstructions(meta.instructions || '')
+        setDataLoading(false)
+        return
+      }
+
       const data = await api.post<{ submission: Submission; commits: Commit[]; assignment: Assignment }>(
         `/code/open?assignment_id=${assignmentId}`, {}
       )
@@ -269,6 +343,46 @@ export default function AssignmentEditorPage() {
     </div>
   )
 
+  if (isDiscussion) {
+    const role = (profile?.role as 'student' | 'teacher' | 'admin') || 'student'
+    // Students don't have access to /classroom/[id] (that's the teacher
+    // view); send them to /learn/[id] so the logo lands somewhere
+    // they're allowed to see.
+    const homeHref = role === 'student' ? `/learn/${classroomId}` : `/classroom/${classroomId}`
+    return (
+      <div style={{ minHeight: '100vh', background: '#F8F7F5', fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column' }}>
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(248,247,245,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(14,45,110,0.08)', padding: '0 1.5rem', height: '52px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href={homeHref} style={{ display: 'flex', alignItems: 'center', gap: '7px', textDecoration: 'none' }}>
+            <div style={{ width: '26px', height: '26px', background: '#1A56DB', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'white' }}>{'>'}_</div>
+          </Link>
+          <span style={{ color: '#D3D1C7' }}>/</span>
+          <span style={{ fontSize: '13px', color: '#0E2D6E', fontWeight: 500 }}>{discussionTitle}</span>
+        </nav>
+        <div style={{ background: 'white', borderBottom: '1px solid rgba(14,45,110,0.08)', padding: '1.25rem 1.5rem' }}>
+          <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+            <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#075985', background: '#E0F2FE', padding: '3px 10px', borderRadius: '99px', marginBottom: '10px' }}>discussion</span>
+            <h1 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 700, color: '#0E2D6E', letterSpacing: '-0.01em' }}>{discussionTitle}</h1>
+            {discussionInstructions && (
+              <p style={{ margin: 0, fontSize: '14px', color: '#5F5E5A', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{discussionInstructions}</p>
+            )}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <DiscussionBoard
+            assignmentId={assignmentId}
+            classroomId={classroomId}
+            viewerRole={role}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Students don't have access to /classroom/[id] (teacher view);
+  // route them to the learn page they actually belong on.
+  const codingHomeHref = profile?.role === 'student' ? `/learn/${classroomId}` : `/classroom/${classroomId}`
+
   return (
     <div style={{ minHeight: '100vh', background: '#1C1C1E', fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column' }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -276,7 +390,7 @@ export default function AssignmentEditorPage() {
       {/* TOPBAR */}
       <div style={{ background: '#2A2A2C', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 1.5rem', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href={`/classroom/${classroomId}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link href={codingHomeHref} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '26px', height: '26px', background: '#1A56DB', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Mono', monospace", fontSize: '10px', color: 'white' }}>{'>'}_</div>
           </Link>
           <span style={{ color: 'rgba(255,255,255,0.3)' }}>/</span>
@@ -332,6 +446,19 @@ export default function AssignmentEditorPage() {
           <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#FEE2E2', cursor: 'pointer', fontSize: '16px' }}>×</button>
         </div>
       )}
+
+      {/* COLLAB GROUP PICKER — null while collab is off for this
+          assignment, otherwise shows the picker or the student's
+          current group bar. */}
+      <div style={{ padding: '0 1rem' }}>
+        <GroupPicker
+          classroomId={classroomId}
+          assignmentId={assignmentId}
+          onGroupChange={g => setCollabGroupId(g?.id || null)}
+          collabReady={collabReady}
+          collabMemberCount={collabMembers.length}
+        />
+      </div>
 
       {/* MAIN AREA */}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '280px 1fr 320px', minHeight: 0 }}>
@@ -391,12 +518,33 @@ export default function AssignmentEditorPage() {
                   .then(data => setSubmission(data.submission))
                   .catch(() => {})
               }}
+              onFindInLesson={handleFindInLesson}
+              onFindInDocs={(hint) => {
+                // If we have a linked lesson, jump to that docs tab; otherwise
+                // fall back to the standalone /docs page.
+                if (assignment?.lesson_id) {
+                  handleFindInDocs(hint)
+                } else {
+                  window.open(`/docs?search=${encodeURIComponent(hint)}`, '_blank')
+                }
+              }}
             />
           )}
         </div>
 
         {/* CENTER — EDITOR + OUTPUT */}
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div ref={editorContainerRef} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+          <div style={{ position: 'absolute', top: '8px', right: '12px', zIndex: 11, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CollabStatusBadge
+              hasGroup={!!collabGroupId}
+              ready={collabReady}
+              members={collabMembers}
+              meUserId={profile?.profile_id || null}
+            />
+            {collabReady && profile && (
+              <CollabPresence members={collabMembers} meUserId={profile.profile_id} />
+            )}
+          </div>
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             {viewingCode !== null && (
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, background: '#0E2D6E', padding: '8px 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
@@ -407,7 +555,42 @@ export default function AssignmentEditorPage() {
                 </div>
               </div>
             )}
-            <textarea ref={textareaRef} value={viewingCode !== null ? viewingCode : code} onChange={e => { if (viewingCode === null && !isSubmitted) { setCode(e.target.value); if (!hasEditedSinceRun && submission) { setHasEditedSinceRun(true); api.post(`/code/track-edit?submission_id=${submission.id}`, {}).catch(() => {}) } } }} onKeyDown={handleTab} readOnly={viewingCode !== null || isSubmitted} spellCheck={false} style={{ width: '100%', height: '100%', background: viewingCode !== null ? '#1a2a1a' : '#1C1C1E', color: viewingCode !== null ? '#9FE1CB' : '#EBF1FD', fontFamily: "'DM Mono', monospace", fontSize: '14px', lineHeight: 1.8, padding: viewingCode !== null ? '2.5rem 1.5rem 1.5rem' : '1.5rem', border: 'none', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
+            <textarea
+              ref={textareaRef}
+              value={viewingCode !== null ? viewingCode : code}
+              onChange={e => {
+                if (viewingCode === null && !isSubmitted) {
+                  const v = e.target.value
+                  setCode(v)
+                  if (!hasEditedSinceRun && submission) {
+                    setHasEditedSinceRun(true)
+                    api.post(`/code/track-edit?submission_id=${submission.id}`, {}).catch(() => {})
+                  }
+                  if (collabReady) {
+                    // Mark the edit immediately so an in-flight remote
+                    // broadcast won't clobber this keystroke while
+                    // sendCode is debouncing.
+                    markEdit()
+                    if (codeBroadcastTimer.current) window.clearTimeout(codeBroadcastTimer.current)
+                    codeBroadcastTimer.current = window.setTimeout(() => sendCode(v), 150)
+                  }
+                }
+              }}
+              onKeyDown={handleTab}
+              readOnly={viewingCode !== null || isSubmitted}
+              spellCheck={false}
+              style={{ width: '100%', height: '100%', background: viewingCode !== null ? '#1a2a1a' : '#1C1C1E', color: viewingCode !== null ? '#9FE1CB' : '#EBF1FD', fontFamily: "'DM Mono', monospace", fontSize: '14px', lineHeight: 1.8, padding: viewingCode !== null ? '2.5rem 1.5rem 1.5rem' : '1.5rem', border: 'none', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+            />
+            {collabReady && (
+              <CollabCursors
+                containerRef={editorContainerRef}
+                textareaRef={textareaRef}
+                code={viewingCode !== null ? viewingCode : code}
+                members={collabMembers}
+                carets={collabCarets}
+                mice={collabMice}
+              />
+            )}
           </div>
           <div style={{ minHeight: '160px', background: '#111113', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <div style={{ padding: '8px 1rem', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: '8px' }}>

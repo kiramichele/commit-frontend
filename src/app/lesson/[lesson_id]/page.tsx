@@ -9,6 +9,7 @@ import ExerciseBlock from '@/components/ExerciseBlock'
 import MarkCompleteButton from '@/components/MarkCompleteButton'
 import LessonCompleteButton from '@/components/LessonCompleteButton'
 import { StandardsBadgeList } from '@/components/Standards'
+import PythonDocsBrowser from '@/components/PythonDocsBrowser'
 
 interface Exercise {
   type: 'coding' | 'free_response' | 'multiple_choice' | 'short_answer'
@@ -43,78 +44,119 @@ interface Lesson {
 
 type Tab = 'lesson' | 'activity' | 'example' | 'practice' | 'docs'
 
-const PYTHON_DOCS = [
-  {
-    category: 'Output',
-    items: [
-      { name: 'print()', syntax: 'print(value)', desc: 'Prints value to the console', example: 'print("Hello!")\nprint(42)' },
-      { name: 'print() with sep', syntax: 'print(a, b, sep=",")', desc: 'Print multiple values with separator', example: 'print("a", "b", sep=", ")' },
-    ]
-  },
-  {
-    category: 'Variables & Types',
-    items: [
-      { name: 'String', syntax: 'x = "text"', desc: 'Stores text', example: 'name = "Alex"\ngreeting = \'Hello\'' },
-      { name: 'Integer', syntax: 'x = 42', desc: 'Whole number', example: 'age = 17\ncount = 0' },
-      { name: 'Float', syntax: 'x = 3.14', desc: 'Decimal number', example: 'gpa = 3.9\nprice = 1.99' },
-      { name: 'Boolean', syntax: 'x = True', desc: 'True or False', example: 'is_logged_in = True\ndone = False' },
-      { name: 'type()', syntax: 'type(x)', desc: 'Returns the type of a variable', example: 'print(type(42))      # int\nprint(type("hi"))    # str' },
-    ]
-  },
-  {
-    category: 'String Operations',
-    items: [
-      { name: 'Concatenation', syntax: 'a + b', desc: 'Join two strings', example: 'first = "Hello"\nsecond = " World"\nprint(first + second)' },
-      { name: 'f-string', syntax: 'f"text {variable}"', desc: 'Embed variable in string', example: 'name = "Alex"\nprint(f"Hello, {name}!")' },
-      { name: 'len()', syntax: 'len(string)', desc: 'Length of string', example: 'word = "Python"\nprint(len(word))  # 6' },
-      { name: '.upper() / .lower()', syntax: 'str.upper()', desc: 'Change case', example: 'print("hello".upper())  # HELLO' },
-      { name: '.split()', syntax: 'str.split(",")', desc: 'Split into list', example: 'words = "a,b,c".split(",")\nprint(words)  # [\'a\', \'b\', \'c\']' },
-    ]
-  },
-  {
-    category: 'Input',
-    items: [
-      { name: 'input()', syntax: 'x = input("prompt")', desc: 'Gets user input as string', example: 'name = input("What is your name? ")\nprint(f"Hello, {name}!")' },
-      { name: 'int(input())', syntax: 'x = int(input())', desc: 'Gets numeric input', example: 'age = int(input("Enter age: "))\nprint(age + 1)' },
-    ]
-  },
-  {
-    category: 'Conditionals',
-    items: [
-      { name: 'if / elif / else', syntax: 'if condition:', desc: 'Branches based on condition', example: 'x = 10\nif x > 5:\n    print("big")\nelif x == 5:\n    print("five")\nelse:\n    print("small")' },
-      { name: 'Comparison ops', syntax: '== != > < >= <=', desc: 'Compare values', example: 'print(5 == 5)   # True\nprint(3 != 4)   # True\nprint(10 >= 10) # True' },
-      { name: 'Logical ops', syntax: 'and, or, not', desc: 'Combine conditions', example: 'x = 7\nif x > 5 and x < 10:\n    print("between 5 and 10")' },
-    ]
-  },
-  {
-    category: 'Loops',
-    items: [
-      { name: 'for loop', syntax: 'for i in range(n):', desc: 'Repeat n times', example: 'for i in range(5):\n    print(i)  # 0 1 2 3 4' },
-      { name: 'for in list', syntax: 'for item in list:', desc: 'Loop through items', example: 'fruits = ["apple","banana"]\nfor fruit in fruits:\n    print(fruit)' },
-      { name: 'while loop', syntax: 'while condition:', desc: 'Repeat while true', example: 'count = 0\nwhile count < 3:\n    print(count)\n    count += 1' },
-      { name: 'break', syntax: 'break', desc: 'Exit the loop early', example: 'for i in range(10):\n    if i == 5:\n        break\n    print(i)' },
-      { name: 'continue', syntax: 'continue', desc: 'Skip to next iteration', example: 'for i in range(5):\n    if i == 2:\n        continue\n    print(i)' },
-    ]
-  },
-  {
-    category: 'Functions',
-    items: [
-      { name: 'def', syntax: 'def name(params):', desc: 'Define a function', example: 'def greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("Alex"))' },
-      { name: 'return', syntax: 'return value', desc: 'Return a value', example: 'def add(a, b):\n    return a + b\n\nresult = add(3, 4)\nprint(result)  # 7' },
-      { name: 'Default params', syntax: 'def f(x=default):', desc: 'Parameter with default', example: 'def greet(name="friend"):\n    print(f"Hi, {name}!")\n\ngreet()         # Hi, friend!\ngreet("Alex")   # Hi, Alex!' },
-    ]
-  },
-  {
-    category: 'Lists',
-    items: [
-      { name: 'Create list', syntax: 'x = [1, 2, 3]', desc: 'Create a list', example: 'nums = [1, 2, 3]\nnames = ["Alice", "Bob"]' },
-      { name: 'Indexing', syntax: 'list[0]', desc: 'Access by index (0-based)', example: 'fruits = ["apple","banana","cherry"]\nprint(fruits[0])   # apple\nprint(fruits[-1])  # cherry' },
-      { name: '.append()', syntax: 'list.append(x)', desc: 'Add to end', example: 'nums = [1, 2]\nnums.append(3)\nprint(nums)  # [1, 2, 3]' },
-      { name: '.remove()', syntax: 'list.remove(x)', desc: 'Remove first match', example: 'nums = [1, 2, 3]\nnums.remove(2)\nprint(nums)  # [1, 3]' },
-      { name: 'len()', syntax: 'len(list)', desc: 'Number of items', example: 'nums = [1, 2, 3, 4]\nprint(len(nums))  # 4' },
-    ]
-  },
-]
+// Python docs moved to /lib/pythonDocs.ts; rendered by PythonDocsBrowser.
+
+interface Annotation {
+  id: string
+  lesson_id: string
+  kind: 'highlight' | 'note'
+  selected_text: string | null
+  quote_before: string | null
+  quote_after: string | null
+  note_text: string | null
+  linked_annotation_id: string | null
+  created_at: string
+}
+
+// Annotation SDK injected into the lesson reading iframe. Watches for
+// selection, shows a floating toolbar, paints existing highlights, and
+// posts every interaction up to the parent via window.postMessage.
+//
+// Protocol (iframe → parent):
+//   COMMIT_HIGHLIGHT       { selected_text, quote_before, quote_after }
+//   COMMIT_HIGHLIGHT_NOTE  { selected_text, quote_before, quote_after }
+//   COMMIT_HIGHLIGHT_CLICK { id }
+//
+// Protocol (parent → iframe):
+//   COMMIT_ANNOTATIONS { highlights: [{ id, selected_text, has_note }] }
+const ANNOTATION_SDK = `<script>
+(function(){
+  if(window.self===window.top)return;
+  var saved = [];
+  function paint(){
+    document.querySelectorAll('mark[data-commit-hl]').forEach(function(m){
+      var p=m.parentNode; while(m.firstChild){ p.insertBefore(m.firstChild,m); } p.removeChild(m);
+    });
+    saved.forEach(function(h){
+      if(!h.selected_text) return;
+      var t=h.selected_text;
+      var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      var node;
+      while(node=walker.nextNode()){
+        if(node.parentNode && (node.parentNode.tagName==='SCRIPT'||node.parentNode.tagName==='STYLE')) continue;
+        var idx=node.textContent.indexOf(t);
+        if(idx>=0){
+          var range=document.createRange();
+          range.setStart(node, idx);
+          range.setEnd(node, idx+t.length);
+          var mark=document.createElement('mark');
+          mark.setAttribute('data-commit-hl', h.id);
+          mark.style.background='#FEF08A';
+          mark.style.borderBottom = h.has_note ? '2px solid #F59E0B' : 'none';
+          mark.style.padding='0';
+          mark.style.cursor='pointer';
+          try { range.surroundContents(mark); } catch(e) {}
+          break;
+        }
+      }
+    });
+    document.querySelectorAll('mark[data-commit-hl]').forEach(function(m){
+      m.addEventListener('click', function(){
+        window.parent.postMessage({type:'COMMIT_HIGHLIGHT_CLICK', id: m.getAttribute('data-commit-hl')},'*');
+      });
+    });
+  }
+  window.addEventListener('message', function(e){
+    if(!e.data || e.data.type !== 'COMMIT_ANNOTATIONS') return;
+    saved = e.data.highlights || [];
+    paint();
+  });
+  var bar=null;
+  function hideBar(){ if(bar){ bar.remove(); bar=null; } }
+  function showBar(rect){
+    hideBar();
+    bar=document.createElement('div');
+    bar.style.cssText='position:fixed;z-index:99999;display:flex;gap:4px;padding:4px;background:#0E2D6E;color:white;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.25);font-family:sans-serif;font-size:12px;';
+    bar.style.top=(rect.bottom+8)+'px';
+    bar.style.left=Math.max(8, rect.left)+'px';
+    var b1=document.createElement('button');
+    b1.textContent='🖍 highlight';
+    b1.style.cssText='border:none;background:transparent;color:white;cursor:pointer;padding:4px 10px;font-size:12px;font-weight:600;';
+    var b2=document.createElement('button');
+    b2.textContent='+ note';
+    b2.style.cssText='border:none;background:#1A56DB;color:white;cursor:pointer;padding:4px 10px;border-radius:5px;font-size:12px;font-weight:600;';
+    bar.appendChild(b1); bar.appendChild(b2);
+    document.body.appendChild(bar);
+    var sel=window.getSelection();
+    if(!sel||sel.isCollapsed){ hideBar(); return; }
+    var text=sel.toString();
+    var range=sel.getRangeAt(0);
+    var before=(range.startContainer.textContent||'').slice(Math.max(0,range.startOffset-40), range.startOffset);
+    var after=(range.endContainer.textContent||'').slice(range.endOffset, range.endOffset+40);
+    b1.addEventListener('click', function(){
+      window.parent.postMessage({type:'COMMIT_HIGHLIGHT', selected_text:text, quote_before:before, quote_after:after},'*');
+      hideBar(); sel.removeAllRanges();
+    });
+    b2.addEventListener('click', function(){
+      window.parent.postMessage({type:'COMMIT_HIGHLIGHT_NOTE', selected_text:text, quote_before:before, quote_after:after},'*');
+      hideBar(); sel.removeAllRanges();
+    });
+  }
+  document.addEventListener('mouseup', function(){
+    setTimeout(function(){
+      var sel=window.getSelection();
+      if(!sel||sel.isCollapsed||sel.toString().trim().length<2){ hideBar(); return; }
+      var r=sel.getRangeAt(0).getBoundingClientRect();
+      if(r.width===0&&r.height===0){ hideBar(); return; }
+      showBar(r);
+    }, 10);
+  });
+  document.addEventListener('mousedown', function(e){
+    if(bar && !bar.contains(e.target)) hideBar();
+  });
+  window.parent.postMessage({type:'COMMIT_ANNOTATION_READY'},'*');
+})();
+<\/script>`
 
 export default function LessonPage() {
   const { profile, loading } = useAuth()
@@ -128,6 +170,13 @@ export default function LessonPage() {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [lessonUrl, setLessonUrl] = useState<string | null>(null)
   const [lessonHtml, setLessonHtml] = useState<string | null>(null)
+  const [annotations, setAnnotations] = useState<Annotation[]>([])
+  const [showAnnotations, setShowAnnotations] = useState(false)
+  const [pendingNoteFor, setPendingNoteFor] = useState<{ selected_text: string; quote_before: string; quote_after: string } | null>(null)
+  const [pendingNoteText, setPendingNoteText] = useState('')
+  const [newGeneralNote, setNewGeneralNote] = useState('')
+  const [showNewGeneralNote, setShowNewGeneralNote] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('lesson')
   const [code, setCode] = useState('')
@@ -135,11 +184,12 @@ export default function LessonPage() {
   const [outputError, setOutputError] = useState(false)
   const [running, setRunning] = useState(false)
   const [docSearch, setDocSearch] = useState('')
-  const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [lessonHint, setLessonHint] = useState<string | null>(null)
   const [exerciseOutput, setExerciseOutput] = useState<Record<number, string>>({})
   const [exerciseErrors, setExerciseErrors] = useState<Record<number, boolean>>({})
   const [runningExercise, setRunningExercise] = useState<number | null>(null)
+  const [exerciseCode, setExerciseCode] = useState<Record<number, string>>({})
+  const [selectedExercise, setSelectedExercise] = useState<number>(0)
 
   const handleExerciseRun = async (code: string, exerciseIndex: number) => {
     setRunningExercise(exerciseIndex)
@@ -192,6 +242,131 @@ export default function LessonPage() {
     }
   }, [searchParams])
 
+  const fetchAnnotations = async () => {
+    try {
+      const data = await api.get<Annotation[]>(`/annotations/lesson/${lessonId}`)
+      setAnnotations(data || [])
+    } catch {}
+  }
+
+  // Build the payload the iframe expects so existing highlights repaint.
+  const annotationsForIframe = () => {
+    const noteByLink: Record<string, boolean> = {}
+    annotations.forEach(a => {
+      if (a.kind === 'note' && a.linked_annotation_id) noteByLink[a.linked_annotation_id] = true
+    })
+    return annotations
+      .filter(a => a.kind === 'highlight')
+      .map(a => ({ id: a.id, selected_text: a.selected_text, has_note: !!noteByLink[a.id] }))
+  }
+
+  const postAnnotationsToIframe = () => {
+    const win = iframeRef.current?.contentWindow
+    if (!win) return
+    win.postMessage({ type: 'COMMIT_ANNOTATIONS', highlights: annotationsForIframe() }, '*')
+  }
+
+  // Re-send annotations whenever they change.
+  useEffect(() => {
+    postAnnotationsToIframe()
+  }, [annotations])
+
+  // Listen for messages from the SDK in the iframe.
+  useEffect(() => {
+    if (!profile) return
+    const handler = async (e: MessageEvent) => {
+      const d = e.data
+      if (!d || !d.type) return
+      if (d.type === 'COMMIT_ANNOTATION_READY') {
+        postAnnotationsToIframe()
+        return
+      }
+      if (d.type === 'COMMIT_HIGHLIGHT') {
+        try {
+          const created = await api.post<Annotation>('/annotations/', {
+            lesson_id: lessonId,
+            kind: 'highlight',
+            selected_text: d.selected_text,
+            quote_before: d.quote_before,
+            quote_after: d.quote_after,
+          })
+          setAnnotations(prev => [...prev, created])
+          setShowAnnotations(true)
+        } catch {}
+        return
+      }
+      if (d.type === 'COMMIT_HIGHLIGHT_NOTE') {
+        setPendingNoteFor({
+          selected_text: d.selected_text,
+          quote_before: d.quote_before,
+          quote_after: d.quote_after,
+        })
+        setPendingNoteText('')
+        setShowAnnotations(true)
+        return
+      }
+      if (d.type === 'COMMIT_HIGHLIGHT_CLICK') {
+        setShowAnnotations(true)
+        // Scroll the sidebar entry into view.
+        setTimeout(() => {
+          const el = document.querySelector(`[data-annotation-id="${d.id}"]`)
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 50)
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [profile, lessonId, annotations])
+
+  const saveLinkedNote = async () => {
+    if (!pendingNoteFor) return
+    try {
+      // Step 1 — create the highlight.
+      const hl = await api.post<Annotation>('/annotations/', {
+        lesson_id: lessonId,
+        kind: 'highlight',
+        selected_text: pendingNoteFor.selected_text,
+        quote_before: pendingNoteFor.quote_before,
+        quote_after: pendingNoteFor.quote_after,
+      })
+      // Step 2 — create the note linked to it.
+      const note = await api.post<Annotation>('/annotations/', {
+        lesson_id: lessonId,
+        kind: 'note',
+        note_text: pendingNoteText.trim() || '(no text)',
+        linked_annotation_id: hl.id,
+      })
+      setAnnotations(prev => [...prev, hl, note])
+      setPendingNoteFor(null)
+      setPendingNoteText('')
+    } catch (err: any) {
+      alert(err.message || 'Could not save note')
+    }
+  }
+
+  const saveGeneralNote = async () => {
+    if (!newGeneralNote.trim()) return
+    try {
+      const note = await api.post<Annotation>('/annotations/', {
+        lesson_id: lessonId,
+        kind: 'note',
+        note_text: newGeneralNote.trim(),
+      })
+      setAnnotations(prev => [...prev, note])
+      setNewGeneralNote('')
+      setShowNewGeneralNote(false)
+    } catch (err: any) {
+      alert(err.message || 'Could not save note')
+    }
+  }
+
+  const deleteAnnotation = async (id: string) => {
+    try {
+      await api.delete(`/annotations/${id}`)
+      setAnnotations(prev => prev.filter(a => a.id !== id))
+    } catch {}
+  }
+
   const fetchLesson = async () => {
     setDataLoading(true)
     try {
@@ -201,6 +376,17 @@ export default function LessonPage() {
       ])
       setLesson(lessonData)
       setCode(lessonData.lesson_content?.coding_starter_code || '')
+      fetchAnnotations()
+
+      // Pre-fill per-exercise code from each exercise's starter_code
+      const starters: Record<number, string> = {}
+      const exs = lessonData.lesson_content?.exercises || []
+      exs.forEach((ex, i) => {
+        if (ex.type === 'coding') starters[i] = ex.starter_code || ''
+      })
+      setExerciseCode(starters)
+      setSelectedExercise(0)
+
       if (urlData) {
         setLessonUrl(urlData.url)
         fetch(urlData.url).then(r => r.text()).then(setLessonHtml).catch(() => {})
@@ -211,6 +397,13 @@ export default function LessonPage() {
     } finally {
       setDataLoading(false)
     }
+  }
+
+  const resetExerciseToStarter = (i: number) => {
+    const exs = lesson?.lesson_content?.exercises || []
+    const starter = exs[i]?.starter_code || ''
+    if (exerciseCode[i] && exerciseCode[i] !== starter && !confirm('Reset to starter code? Your edits will be lost.')) return
+    setExerciseCode(prev => ({ ...prev, [i]: starter }))
   }
 
   const handleRun = async () => {
@@ -242,25 +435,18 @@ export default function LessonPage() {
     }
   }
 
-  const filteredDocs = PYTHON_DOCS.map(cat => ({
-    ...cat,
-    items: cat.items.filter(item =>
-      !docSearch ||
-      item.name.toLowerCase().includes(docSearch.toLowerCase()) ||
-      item.desc.toLowerCase().includes(docSearch.toLowerCase()) ||
-      item.syntax.toLowerCase().includes(docSearch.toLowerCase())
-    )
-  })).filter(cat => cat.items.length > 0)
 
   const hasActivity = !!lesson?.lesson_content?.activity_file_path
-  const hasCoding = !!lesson?.lesson_content?.has_coding_exercise
+  const codingExercises = (lesson?.lesson_content?.exercises || []).filter(ex => ex.type === 'coding')
+  const hasExercises = codingExercises.length > 0
+  const hasLegacyCoding = !!lesson?.lesson_content?.has_coding_exercise && !hasExercises
+  const isCodingLesson = hasExercises || hasLegacyCoding
   const hasExample = !!(lesson?.lesson_content?.example_code)
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'lesson', label: '📄 lesson' },
+    { id: 'lesson', label: isCodingLesson ? '⌨ code' : '📄 lesson' },
     ...(hasActivity ? [{ id: 'activity' as Tab, label: '⚡ activity' }] : []),
     ...(hasExample ? [{ id: 'example' as Tab, label: '💡 example' }] : []),
-    ...(hasCoding ? [{ id: 'practice' as Tab, label: '⌨ practice' }] : []),
     { id: 'docs', label: '📚 python docs' },
   ]
 
@@ -300,9 +486,6 @@ export default function LessonPage() {
         {(lesson as any)?.standards_tags?.length > 0 && (
           <StandardsBadgeList tags={(lesson as any).standards_tags} max={5} />
         )}
-        {lesson?.lesson_content?.estimated_minutes && (
-          <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#888780' }}>~{lesson.lesson_content.estimated_minutes} min</span>
-        )}
       </nav>
 
       {/* TABS */}
@@ -322,7 +505,7 @@ export default function LessonPage() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
           {/* ── LESSON TAB ── */}
-          {activeTab === 'lesson' && (
+          {activeTab === 'lesson' && !isCodingLesson && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {lessonHint && (
                 <div style={{ padding: '10px 16px', background: '#FEF9C3', borderBottom: '1px solid rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexShrink: 0 }}>
@@ -333,18 +516,231 @@ export default function LessonPage() {
                   <button onClick={() => setLessonHint(null)} style={{ background: 'none', border: 'none', color: '#854D0E', cursor: 'pointer', fontSize: '16px' }}>×</button>
                 </div>
               )}
-              {lessonHtml ? (
-                <iframe srcDoc={lessonHtml} style={{ width: '100%', height: '100%', border: 'none', minHeight: 'calc(100vh - 104px)' }} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title={lesson?.title} />
-              ) : (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#888780', fontSize: '14px' }}>
-                  {lessonUrl ? 'loading lesson...' : 'no lesson content uploaded yet'}
-                </div>
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: showAnnotations ? '1fr 300px' : '1fr', minHeight: 'calc(100vh - 104px)' }}>
+                {lessonHtml ? (
+                  <iframe
+                    ref={iframeRef}
+                    srcDoc={lessonHtml + (profile?.role === 'student' ? ANNOTATION_SDK : '')}
+                    onLoad={postAnnotationsToIframe}
+                    style={{ width: '100%', height: '100%', border: 'none', minHeight: 'calc(100vh - 104px)' }}
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    title={lesson?.title}
+                  />
+                ) : (
+                  <div style={{ padding: '3rem', textAlign: 'center', color: '#888780', fontSize: '14px' }}>
+                    {lessonUrl ? 'loading lesson...' : 'no lesson content uploaded yet'}
+                  </div>
+                )}
+
+                {/* ANNOTATION SIDEBAR */}
+                {showAnnotations && profile?.role === 'student' && (
+                  <div style={{ background: 'white', borderLeft: '1px solid rgba(14,45,110,0.08)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(14,45,110,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0E2D6E', letterSpacing: '0.05em', textTransform: 'uppercase' }}>my notes ({annotations.length})</span>
+                      <button onClick={() => setShowAnnotations(false)} style={{ background: 'none', border: 'none', color: '#888780', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}>×</button>
+                    </div>
+
+                    {/* Pending highlight + note input */}
+                    {pendingNoteFor && (
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(14,45,110,0.06)', background: '#FEF9C3' }}>
+                        <div style={{ fontSize: '11px', color: '#854D0E', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>new highlight + note</div>
+                        <div style={{ fontSize: '12px', color: '#854D0E', fontStyle: 'italic', marginBottom: '8px', maxHeight: '60px', overflow: 'hidden' }}>"{pendingNoteFor.selected_text}"</div>
+                        <textarea autoFocus value={pendingNoteText} onChange={e => setPendingNoteText(e.target.value)} rows={3} placeholder="what's your thought?" style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1.5px solid rgba(245,158,11,0.3)', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' }} />
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                          <button onClick={() => { setPendingNoteFor(null); setPendingNoteText('') }} style={{ flex: 1, padding: '5px', borderRadius: '5px', background: 'transparent', border: '1.5px solid rgba(14,45,110,0.15)', fontSize: '11px', fontWeight: 600, color: '#5F5E5A', cursor: 'pointer' }}>cancel</button>
+                          <button onClick={saveLinkedNote} style={{ flex: 1, padding: '5px', borderRadius: '5px', background: '#1A56DB', border: 'none', fontSize: '11px', fontWeight: 600, color: 'white', cursor: 'pointer' }}>save</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New general note */}
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(14,45,110,0.06)' }}>
+                      {showNewGeneralNote ? (
+                        <>
+                          <textarea autoFocus value={newGeneralNote} onChange={e => setNewGeneralNote(e.target.value)} rows={3} placeholder="general note about this lesson..." style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1.5px solid rgba(14,45,110,0.12)', fontSize: '12px', outline: 'none', resize: 'vertical', fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box', background: '#FAFAF8' }} />
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                            <button onClick={() => { setShowNewGeneralNote(false); setNewGeneralNote('') }} style={{ flex: 1, padding: '5px', borderRadius: '5px', background: 'transparent', border: '1.5px solid rgba(14,45,110,0.15)', fontSize: '11px', fontWeight: 600, color: '#5F5E5A', cursor: 'pointer' }}>cancel</button>
+                            <button onClick={saveGeneralNote} disabled={!newGeneralNote.trim()} style={{ flex: 1, padding: '5px', borderRadius: '5px', background: newGeneralNote.trim() ? '#1A56DB' : '#D3D1C7', border: 'none', fontSize: '11px', fontWeight: 600, color: 'white', cursor: newGeneralNote.trim() ? 'pointer' : 'not-allowed' }}>save</button>
+                          </div>
+                        </>
+                      ) : (
+                        <button onClick={() => setShowNewGeneralNote(true)} style={{ width: '100%', padding: '7px', borderRadius: '6px', background: '#EBF1FD', border: '1.5px dashed rgba(26,86,219,0.3)', fontSize: '12px', fontWeight: 600, color: '#1A56DB', cursor: 'pointer' }}>+ general note</button>
+                      )}
+                    </div>
+
+                    {/* Annotation list */}
+                    {annotations.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: '#888780', fontSize: '12px', lineHeight: 1.6 }}>
+                        select text in the lesson to highlight or add a note.
+                      </div>
+                    ) : (
+                      annotations.map(a => {
+                        const linkedNote = a.kind === 'highlight'
+                          ? annotations.find(x => x.linked_annotation_id === a.id)
+                          : null
+                        if (a.kind === 'note' && a.linked_annotation_id) return null  // shown under its highlight
+                        return (
+                          <div key={a.id} data-annotation-id={a.id} style={{ padding: '10px 16px', borderBottom: '1px solid rgba(14,45,110,0.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: a.kind === 'highlight' ? '#854D0E' : '#0C447C', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {a.kind === 'highlight' ? '🖍 highlight' : '📝 note'}
+                              </span>
+                              <button onClick={() => deleteAnnotation(a.id)} style={{ background: 'none', border: 'none', color: '#888780', cursor: 'pointer', fontSize: '14px', padding: 0, lineHeight: 1 }}>×</button>
+                            </div>
+                            {a.selected_text && (
+                              <div style={{ fontSize: '12px', color: '#854D0E', fontStyle: 'italic', background: '#FEF08A', padding: '4px 6px', borderRadius: '4px', marginBottom: '4px' }}>"{a.selected_text}"</div>
+                            )}
+                            {a.note_text && (
+                              <div style={{ fontSize: '12px', color: '#0E2D6E', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{a.note_text}</div>
+                            )}
+                            {linkedNote?.note_text && (
+                              <div style={{ marginTop: '6px', padding: '6px 8px', background: '#EBF1FD', borderRadius: '4px', fontSize: '12px', color: '#0E2D6E', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 600, color: '#0C447C', marginBottom: '2px' }}>📝 NOTE</div>
+                                {linkedNote.note_text}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+              {profile?.role === 'student' && lesson && lessonHtml && (
+                <button
+                  onClick={() => setShowAnnotations(s => !s)}
+                  style={{ position: 'fixed', bottom: '70px', right: '20px', zIndex: 100, padding: '10px 16px', background: '#0E2D6E', color: 'white', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", boxShadow: '0 4px 16px rgba(14,45,110,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  📝 my notes ({annotations.length})
+                </button>
               )}
               {profile?.role === 'student' && lesson && (
                 <LessonCompleteButton lessonId={lesson.id} lessonTitle={lesson.title} />
               )}
             </div>
           )}
+
+          {/* ── CODING LESSON 3-PANE ── */}
+          {activeTab === 'lesson' && isCodingLesson && (() => {
+            // Build the canonical "current exercise" — works for both new (exercises[]) and legacy (single coding fields)
+            const currentExercise: Exercise = hasExercises
+              ? codingExercises[selectedExercise] || codingExercises[0]
+              : {
+                  type: 'coding',
+                  instructions: lesson?.lesson_content?.coding_instructions || '',
+                  starter_code: lesson?.lesson_content?.coding_starter_code || '',
+                }
+            const exIdx = hasExercises ? selectedExercise : -1  // -1 = legacy single
+            const codeKey = hasExercises ? selectedExercise : -1
+            const currentCode = exerciseCode[codeKey] ?? (currentExercise.starter_code || '')
+            const currentOutput = exerciseOutput[codeKey] || ''
+            const currentError = !!exerciseErrors[codeKey]
+            const isRunning = runningExercise === codeKey
+            const starterForCurrent = currentExercise.starter_code || ''
+
+            const runCurrent = () => handleExerciseRun(currentCode, codeKey)
+            const updateCode = (val: string) => setExerciseCode(prev => ({ ...prev, [codeKey]: val }))
+
+            const handleEditorTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+              if (e.key === 'Tab') {
+                e.preventDefault()
+                const el = e.currentTarget
+                const start = el.selectionStart
+                const next = currentCode.substring(0, start) + '    ' + currentCode.substring(start)
+                updateCode(next)
+                setTimeout(() => { el.selectionStart = el.selectionEnd = start + 4 }, 0)
+              }
+            }
+
+            return (
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.1fr 1fr', minHeight: 'calc(100vh - 104px)' }}>
+
+                {/* LEFT PANE — PROBLEM */}
+                <div style={{ borderRight: '1px solid rgba(14,45,110,0.08)', background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div style={{ padding: '10px 16px', background: '#F8F7F5', borderBottom: '1px solid rgba(14,45,110,0.06)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#888780' }}>
+                    problem
+                  </div>
+                  {lessonHtml ? (
+                    <iframe srcDoc={lessonHtml} style={{ flex: 1, width: '100%', border: 'none' }} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title={lesson?.title} />
+                  ) : currentExercise.instructions ? (
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', fontSize: '14px', color: '#0E2D6E', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                      {currentExercise.instructions}
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#888780', fontSize: '13px', textAlign: 'center' }}>
+                      no problem description uploaded yet
+                    </div>
+                  )}
+                </div>
+
+                {/* MIDDLE PANE — EDITOR */}
+                <div style={{ background: '#1C1C1E', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(14,45,110,0.08)' }}>
+
+                  {/* Exercise tabs (only if multiple) */}
+                  {hasExercises && codingExercises.length > 1 && (
+                    <div style={{ display: 'flex', gap: '0', background: '#242426', borderBottom: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+                      {codingExercises.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedExercise(i)}
+                          style={{
+                            padding: '8px 16px', fontSize: '12px', fontWeight: 600,
+                            background: i === selectedExercise ? '#1C1C1E' : 'transparent',
+                            color: i === selectedExercise ? '#EBF1FD' : 'rgba(255,255,255,0.5)',
+                            border: 'none', borderBottom: i === selectedExercise ? '2px solid #1A56DB' : '2px solid transparent',
+                            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
+                          }}
+                        >
+                          exercise {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Editor toolbar */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: '#242426', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>editor · python</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => resetExerciseToStarter(codeKey)}
+                        disabled={!starterForCurrent || currentCode === starterForCurrent}
+                        title="restore the original starter code"
+                        style={{ padding: '5px 12px', background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        ↺ starter
+                      </button>
+                      <button
+                        onClick={runCurrent}
+                        disabled={isRunning}
+                        style={{ padding: '5px 14px', background: isRunning ? '#166534' : '#22C55E', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: isRunning ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {isRunning ? '◌ running...' : '▶ run'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={currentCode}
+                    onChange={e => updateCode(e.target.value)}
+                    onKeyDown={handleEditorTab}
+                    spellCheck={false}
+                    style={{ flex: 1, width: '100%', background: '#1C1C1E', color: '#EBF1FD', fontFamily: "'DM Mono', monospace", fontSize: '14px', lineHeight: 1.8, padding: '1rem 1.25rem', border: 'none', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {/* RIGHT PANE — CONSOLE */}
+                <div style={{ background: '#111113', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '10px 16px', background: '#1C1C1E', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+                    console
+                  </div>
+                  <pre style={{ flex: 1, margin: 0, padding: '1rem 1.25rem', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: currentError ? '#F09595' : '#22C55E', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowY: 'auto' }}>
+                    {currentOutput || <span style={{ color: 'rgba(255,255,255,0.25)' }}>run your code to see output here</span>}
+                  </pre>
+                </div>
+
+              </div>
+            )
+          })()}
 
           {/* ── ACTIVITY TAB ── */}
           {activeTab === 'activity' && (
@@ -415,115 +811,11 @@ export default function LessonPage() {
             </div>
           )}
 
-          {/* ── PRACTICE TAB ── */}
-          {activeTab === 'practice' && (
-            <div style={{ flex: 1, padding: '1.5rem 2rem', maxWidth: '860px', margin: '0 auto', width: '100%' }}>
-
-              {lesson?.lesson_content?.exercises?.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {lesson.lesson_content.exercises.map((exercise, i) => (
-                    <div key={i}>
-                      {lesson.lesson_content!.exercises!.length > 1 && (
-                        <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#888780', marginBottom: '8px' }}>
-                          exercise {i + 1} of {lesson.lesson_content!.exercises!.length}
-                        </div>
-                      )}
-                      <ExerciseBlock
-                        exercise={exercise}
-                        exerciseIndex={i}
-                        lessonId={lesson.id}
-                        onRunCode={(code) => handleExerciseRun(code, i)}
-                        output={exerciseOutput[i]}
-                        outputError={exerciseErrors[i]}
-                        running={runningExercise === i}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : lesson?.lesson_content?.has_coding_exercise ? (
-                <div style={{ display: 'flex', flexDirection: 'column', background: '#1C1C1E', borderRadius: '12px', overflow: 'hidden' }}>
-                  {lesson.lesson_content.coding_instructions && (
-                    <div style={{ padding: '1.25rem 1.5rem', background: '#242426', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                        <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>instructions</div>
-                        <ReadAloud text={lesson.lesson_content.coding_instructions} isPro={false} />
-                      </div>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
-                        {lesson.lesson_content.coding_instructions}
-                      </p>
-                    </div>
-                  )}
-                  <div style={{ flex: 1, position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: '10px', right: '1rem', zIndex: 10 }}>
-                      <button onClick={handleRun} disabled={running} style={{ padding: '7px 16px', background: running ? '#166534' : '#22C55E', color: 'white', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: 700, cursor: running ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                        {running ? '◌ running...' : '▶ run'}
-                      </button>
-                    </div>
-                    <textarea value={code} onChange={e => setCode(e.target.value)} onKeyDown={handleTab} spellCheck={false} style={{ width: '100%', height: '300px', background: '#1C1C1E', color: '#EBF1FD', fontFamily: "'DM Mono', monospace", fontSize: '14px', lineHeight: 1.8, padding: '1.5rem', border: 'none', outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
-                  </div>
-                  <div style={{ background: '#111113', borderTop: '1px solid rgba(255,255,255,0.06)', minHeight: '120px' }}>
-                    <div style={{ padding: '8px 1rem', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>output</div>
-                    <pre style={{ margin: 0, padding: '10px 1rem', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: outputError ? '#F09595' : '#22C55E', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {output || <span style={{ color: 'rgba(255,255,255,0.2)' }}>run your code to see output here</span>}
-                    </pre>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#888780', fontSize: '14px' }}>
-                  no practice exercises for this lesson
-                </div>
-              )}
-            </div>
-          )}
 
           {/* ── DOCS TAB ── */}
           {activeTab === 'docs' && (
             <div style={{ flex: 1, maxWidth: '860px', margin: '0 auto', width: '100%', padding: '1.5rem 2rem 3rem' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <input
-                  type="text"
-                  placeholder="search python docs..."
-                  value={docSearch}
-                  onChange={e => setDocSearch(e.target.value)}
-                  style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid rgba(14,45,110,0.12)', fontSize: '14px', outline: 'none', background: 'white', fontFamily: "'DM Sans', sans-serif" }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {filteredDocs.map(cat => (
-                  <div key={cat.category} style={{ background: 'white', borderRadius: '12px', border: '1px solid rgba(14,45,110,0.08)', overflow: 'hidden' }}>
-                    <div style={{ padding: '10px 1.25rem', background: '#F8F7F5', borderBottom: '1px solid rgba(14,45,110,0.06)', fontSize: '12px', fontWeight: 700, color: '#0E2D6E', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                      {cat.category}
-                    </div>
-                    {cat.items.map((item, i) => (
-                      <div key={item.name} data-docs-key={item.name} style={{ borderBottom: i < cat.items.length - 1 ? '1px solid rgba(14,45,110,0.05)' : 'none' }}>
-                        <div
-                          onClick={() => setExpandedDoc(expandedDoc === `${cat.category}-${item.name}` ? null : `${cat.category}-${item.name}`)}
-                          style={{ padding: '10px 1.25rem', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-                        >
-                          <code style={{ fontSize: '13px', fontFamily: "'DM Mono', monospace", color: '#1A56DB', background: '#EBF1FD', padding: '2px 8px', borderRadius: '4px', flexShrink: 0 }}>{item.syntax}</code>
-                          <span style={{ fontSize: '13px', color: '#0E2D6E', fontWeight: 500 }}>{item.name}</span>
-                          <span style={{ fontSize: '12px', color: '#888780', marginLeft: 'auto' }}>{item.desc}</span>
-                          <span style={{ color: '#888780', fontSize: '12px', flexShrink: 0, transform: expandedDoc === `${cat.category}-${item.name}` ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
-                        </div>
-                        {expandedDoc === `${cat.category}-${item.name}` && (
-                          <div style={{ padding: '0 1.25rem 12px' }}>
-                            <pre style={{ margin: 0, background: '#1C1C1E', color: '#9FE1CB', fontFamily: "'DM Mono', monospace", fontSize: '13px', lineHeight: 1.8, padding: '12px 16px', borderRadius: '8px', whiteSpace: 'pre-wrap' }}>
-                              {item.example}
-                            </pre>
-                            <button
-                              onClick={() => { setCode(item.example); setActiveTab('practice') }}
-                              style={{ marginTop: '8px', padding: '5px 12px', background: '#EBF1FD', color: '#1A56DB', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                            >
-                              try it in practice →
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <PythonDocsBrowser initialSearch={docSearch} />
             </div>
           )}
         </div>

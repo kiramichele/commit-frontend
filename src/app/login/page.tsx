@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import DemoButton from '@/components/DemoButton'
 
 export default function LoginPage() {
   console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
@@ -76,17 +77,35 @@ export default function LoginPage() {
                 />
               </div>
 
+              <div style={{ textAlign: 'right', marginTop: '-0.5rem' }}>
+                <Link href="/forgot-password" style={{ fontSize: '13px', color: '#1A56DB', textDecoration: 'none', fontWeight: 500 }}>
+                  forgot your password?
+                </Link>
+              </div>
+
               <button
                 type="submit" disabled={loading}
                 style={{ width: '100%', padding: '12px', background: loading ? '#93C5FD' : '#1A56DB', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}
               >
                 {loading ? 'signing in...' : 'sign in →'}
               </button>
+
+              <Link
+                href="/forgot-password"
+                style={{ width: '100%', padding: '11px', background: 'transparent', color: '#1A56DB', border: '1.5px solid rgba(26,86,219,0.3)', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}
+              >
+                reset password
+              </Link>
             </form>
           </div>
 
-          <p>are you a teacher? <Link href="/signup">apply for an account</Link></p>
-          <p>are you a student? <Link href="/join">join a classroom →</Link></p>
+          <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '14px', color: '#888780' }}>are you a teacher? <Link href="/signup" style={{ color: '#1A56DB', textDecoration: 'none', fontWeight: 500 }}>apply for an account</Link></p>
+          <p style={{ textAlign: 'center', marginTop: '0.25rem', fontSize: '14px', color: '#888780' }}>are you a student? <Link href="/join" style={{ color: '#1A56DB', textDecoration: 'none', fontWeight: 500 }}>join a classroom →</Link></p>
+
+          <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '10px', border: '1px dashed rgba(14,45,110,0.15)', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#888780' }}>just exploring? no account needed.</p>
+            <DemoButton label="🎬 try the live demo" />
+          </div>
 
         </div>
       </div>
